@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin OFLAN — Today</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1000px;
+      margin: auto;
+      padding: 20px;
+      background: #fafafa;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 15px;
+    }
+    input {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      margin-top: 6px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 16px;
+      font-size: 18px;
+      margin-top: 20px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    pre {
+      background: #111;
+      color: #0f0;
+      padding: 12px;
+      margin-top: 20px;
+      overflow-x: auto;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Admin OFLAN — Today</h1>
+
+  <label>Order ID</label>
+  <input id="order" placeholder="2512240017" />
+
+  <label>Phone</label>
+  <input id="phone" placeholder="+628xxxxxxxxxx" />
+
+  <label>Value (Rp)</label>
+  <input id="value" type="number" placeholder="278000" />
+
+  <button onclick="markPaid()">PAID</button>
+
+  <div id="error" class="error"></div>
+  <pre id="result"></pre>
+
+<script>
+async function markPaid() {
+  const order = document.getElementById("order").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const value = Number(document.getElementById("value").value);
+
+  document.getElementById("error").innerText = "";
+  document.getElementById("result").innerText = "";
+
+  if (!order || !phone || !value) {
+    document.getElementById("error").innerText = "❌ Semua field wajib diisi";
+    return;
+  }
+
+  try {
+    const res = await fetch("https://api.oflan.id/mark-paid", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        order_id: order,   // ⬅️ PAKAI PERSIS INPUT ADMIN
+        phone: phone,
+        value: value
+      })
+    });
+
+    const data = await res.json();
+    document.getElementById("result").innerText =
+      JSON.stringify(data, null, 2);
+
+  } catch (err) {
+    document.getElementById("error").innerText =
+      "❌ Network error / API unreachable";
+  }
+}
+</script>
+
+</body>
+</html>
