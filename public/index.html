@@ -5,110 +5,411 @@
   <title>Admin OFLAN — Today</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    :root{
+      --blue:#2563eb; --blue2:#1d4ed8;
+      --bg:#fafafa; --card:#ffffff; --muted:#6b7280;
+      --ok:#16a34a; --bad:#dc2626; --line:#e5e7eb;
+    }
     body {
       font-family: Arial, sans-serif;
-      max-width: 1000px;
+      max-width: 1100px;
       margin: auto;
       padding: 20px;
-      background: #fafafa;
+      background: var(--bg);
+      color:#111827;
     }
-    h1 {
-      margin-bottom: 20px;
+    h1{ margin: 0 0 14px 0; }
+    .sub{ color:var(--muted); margin-bottom: 18px; }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:16px;
+      margin:14px 0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
     }
-    label {
-      font-weight: bold;
-      display: block;
-      margin-top: 15px;
-    }
+    label { font-weight: bold; display: block; margin-top: 12px; }
     input {
       width: 100%;
       padding: 14px;
       font-size: 16px;
       margin-top: 6px;
       box-sizing: border-box;
+      border:1px solid var(--line);
+      border-radius:10px;
+      outline:none;
     }
+    input:focus{ border-color:#93c5fd; box-shadow:0 0 0 3px rgba(147,197,253,0.35); }
     button {
       width: 100%;
-      padding: 16px;
-      font-size: 18px;
-      margin-top: 20px;
-      background: #2563eb;
+      padding: 14px;
+      font-size: 16px;
+      margin-top: 14px;
+      background: var(--blue);
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 10px;
       cursor: pointer;
+      font-weight: 700;
     }
-    button:hover {
-      background: #1d4ed8;
+    button:hover { background: var(--blue2); }
+    button.secondary{
+      background:#111827;
     }
+    button.secondary:hover{ background:#0b1220; }
+    button.ghost{
+      background:#eff6ff;
+      color:#1d4ed8;
+      border:1px solid #bfdbfe;
+    }
+    button.ghost:hover{ background:#dbeafe; }
+    .row{ display:flex; gap:12px; flex-wrap:wrap; }
+    .row > div{ flex:1; min-width: 220px; }
+    .error { color: var(--bad); font-weight: bold; margin-top: 10px; }
+    .ok { color: var(--ok); font-weight: bold; margin-top: 10px; }
+
     pre {
-      background: #111;
-      color: #0f0;
+      background: #0b1220;
+      color: #d1fae5;
       padding: 12px;
-      margin-top: 20px;
+      margin-top: 12px;
       overflow-x: auto;
+      border-radius: 12px;
+      border:1px solid #111827;
+      font-size: 12px;
+      display:none;
     }
-    .error {
-      color: red;
-      font-weight: bold;
-      margin-top: 10px;
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      overflow:hidden;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:#fff;
+    }
+    th, td{
+      padding:10px 10px;
+      border-bottom:1px solid var(--line);
+      font-size: 13px;
+      vertical-align: top;
+    }
+    th{
+      text-align:left;
+      color:#111827;
+      background:#f9fafb;
+      font-size:12px;
+      letter-spacing:0.02em;
+      text-transform:uppercase;
+    }
+    tr:last-child td{ border-bottom:none; }
+
+    .badge{
+      display:inline-block;
+      padding:4px 10px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:12px;
+    }
+    .badge.ok{ background:#dcfce7; color:#166534; }
+    .badge.bad{ background:#fee2e2; color:#991b1b; }
+
+    .mini{
+      font-size:12px;
+      color:var(--muted);
+    }
+    .topbar{
+      display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap;
+    }
+    .stats{
+      display:flex; gap:10px; flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .stat{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px 12px;
+      background:#fff;
+      min-width:160px;
+    }
+    .stat b{ font-size:18px; display:block; margin-top:4px; }
+    .actions{
+      display:flex; gap:10px; flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .actions button{ width:auto; padding:12px 14px; margin-top:0; }
+    .nowrap{ white-space:nowrap; }
+    .smallbtn{
+      width:auto;
+      padding:8px 10px;
+      font-size:12px;
+      border-radius:10px;
+      margin-top:0;
     }
   </style>
 </head>
 <body>
 
-  <h1>Admin OFLAN — Today</h1>
+  <div class="topbar">
+    <div>
+      <h1>Admin OFLAN — Today</h1>
+      <div class="sub">Static history harian + resend Meta untuk yang failed. (Today = Asia/Jakarta)</div>
+    </div>
+    <div class="mini">
+      API: <span id="apiBaseLabel"></span><br/>
+      Last refresh: <span id="lastRefresh">-</span>
+    </div>
+  </div>
 
-  <label>Order ID</label>
-  <input id="order" placeholder="2512240017" />
+  <div class="card">
+    <h3 style="margin:0 0 10px 0;">✅ Mark Paid</h3>
+    <div class="row">
+      <div>
+        <label>Order ID</label>
+        <input id="order" placeholder="2512240017" autocomplete="off" />
+      </div>
+      <div>
+        <label>Phone</label>
+        <input id="phone" placeholder="+628xxxxxxxxxx / 08xxxxxxxxxx" autocomplete="off" />
+      </div>
+      <div>
+        <label>Value (Rp)</label>
+        <input id="value" type="number" placeholder="278000" autocomplete="off" />
+      </div>
+    </div>
 
-  <label>Phone</label>
-  <input id="phone" placeholder="+628xxxxxxxxxx" />
+    <button onclick="markPaid()">PAID</button>
 
-  <label>Value (Rp)</label>
-  <input id="value" type="number" placeholder="278000" />
+    <div id="error" class="error"></div>
+    <div id="ok" class="ok"></div>
+    <pre id="result"></pre>
+  </div>
 
-  <button onclick="markPaid()">PAID</button>
+  <div class="card">
+    <h3 style="margin:0 0 6px 0;">📌 History Today (Static)</h3>
+    <div class="mini">History ini diambil dari backend (KV), jadi **tidak hilang** walau refresh halaman.</div>
 
-  <div id="error" class="error"></div>
-  <pre id="result"></pre>
+    <div class="stats">
+      <div class="stat">
+        <div class="mini">Total</div>
+        <b id="stTotal">0</b>
+      </div>
+      <div class="stat">
+        <div class="mini">SUCCESS (Meta)</div>
+        <b id="stSuccess">0</b>
+      </div>
+      <div class="stat">
+        <div class="mini">FAILED (Meta)</div>
+        <b id="stFailed">0</b>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="secondary" onclick="resendFailedToday()">🔁 Re-send ALL FAILED (Today)</button>
+      <button class="ghost" onclick="fetchHistory()">↻ Refresh Now</button>
+    </div>
+
+    <div id="historyErr" class="error"></div>
+
+    <div style="margin-top:12px; overflow:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th class="nowrap">Created</th>
+            <th>Order ID</th>
+            <th>Phone</th>
+            <th class="nowrap">Value</th>
+            <th class="nowrap">Meta</th>
+            <th class="nowrap">Action</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="6" class="mini">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
 <script>
-async function markPaid() {
-  const order = document.getElementById("order").value.trim();
-  const phone = document.getElementById("phone").value.trim();
-  const value = Number(document.getElementById("value").value);
+  const API_BASE = "https://api.oflan.id";
+  document.getElementById("apiBaseLabel").innerText = API_BASE;
 
-  document.getElementById("error").innerText = "";
-  document.getElementById("result").innerText = "";
-
-  if (!order || !phone || !value) {
-    document.getElementById("error").innerText = "❌ Semua field wajib diisi";
-    return;
+  function rupiah(n){
+    try { return new Intl.NumberFormat("id-ID").format(Number(n || 0)); }
+    catch { return String(n || 0); }
   }
 
-  try {
-    const res = await fetch("https://api.oflan.id/mark-paid", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        order_id: order,   // ⬅️ PAKAI PERSIS INPUT ADMIN
-        phone: phone,
-        value: value
-      })
+  function fmtTime(iso){
+    if(!iso) return "-";
+    try {
+      return new Date(iso).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+    } catch {
+      return iso;
+    }
+  }
+
+  async function apiFetch(path, options){
+    const res = await fetch(API_BASE + path, options);
+    let data = null;
+    try { data = await res.json(); } catch(e) {}
+    if(!res.ok){
+      const msg = data?.message || ("HTTP " + res.status);
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  async function markPaid() {
+    const order = document.getElementById("order").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const value = Number(document.getElementById("value").value);
+
+    document.getElementById("error").innerText = "";
+    document.getElementById("ok").innerText = "";
+    document.getElementById("result").style.display = "none";
+    document.getElementById("result").innerText = "";
+
+    if (!order || !phone || !value) {
+      document.getElementById("error").innerText = "❌ Semua field wajib diisi";
+      return;
+    }
+
+    try {
+      const data = await apiFetch("/mark-paid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: order, phone, value })
+      });
+
+      document.getElementById("ok").innerText =
+        (data.status === "ignored")
+          ? `⚠️ Order ${order} sudah pernah di-input (ignored).`
+          : `✅ OK — ${order} — Meta: ${data.meta_status}`;
+
+      // Optional: show raw JSON
+      document.getElementById("result").style.display = "block";
+      document.getElementById("result").innerText = JSON.stringify(data, null, 2);
+
+      // Clear value for faster repeat (optional)
+      document.getElementById("order").value = "";
+      document.getElementById("phone").value = "";
+      document.getElementById("value").value = "";
+
+      await fetchHistory();
+    } catch (err) {
+      document.getElementById("error").innerText =
+        "❌ " + (err?.message || "Network error / API unreachable");
+    }
+  }
+
+  async function resendFailedToday(){
+    document.getElementById("historyErr").innerText = "";
+    try{
+      const data = await apiFetch("/resend-failed-today", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({})
+      });
+      document.getElementById("ok").innerText =
+        `🔁 Resend done — resent: ${data.resent}, skipped: ${data.skipped}, success_now: ${data.success_now}`;
+      await fetchHistory();
+    }catch(err){
+      document.getElementById("historyErr").innerText = "❌ " + (err?.message || "Resend failed");
+    }
+  }
+
+  async function resendOne(orderId){
+    document.getElementById("historyErr").innerText = "";
+    try{
+      const data = await apiFetch("/resend-meta", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ order_id: orderId })
+      });
+      document.getElementById("ok").innerText =
+        `🔁 ${orderId} — ${data.status} — Meta: ${data.meta_status}`;
+      await fetchHistory();
+    }catch(err){
+      document.getElementById("historyErr").innerText = "❌ " + (err?.message || "Resend failed");
+    }
+  }
+
+  function renderHistory(rows){
+    const tb = document.getElementById("historyBody");
+    tb.innerHTML = "";
+
+    if(!rows || rows.length === 0){
+      tb.innerHTML = `<tr><td colspan="6" class="mini">Belum ada data hari ini.</td></tr>`;
+      return;
+    }
+
+    for(const r of rows){
+      const isOk = r.meta_status === "SUCCESS";
+      const badge = isOk
+        ? `<span class="badge ok">SUCCESS</span>`
+        : `<span class="badge bad">FAILED</span>`;
+
+      const metaLine = (() => {
+        const recv = r.meta?.events_received ?? 0;
+        const fbtrace = r.meta?.fbtrace_id ? `fbtrace: ${r.meta.fbtrace_id}` : "";
+        const err = r.meta?.error ? `err: ${typeof r.meta.error === "string" ? r.meta.error : JSON.stringify(r.meta.error)}` : "";
+        const parts = [
+          `received: ${recv}`,
+          fbtrace,
+          err
+        ].filter(Boolean);
+        return parts.length ? `<div class="mini">${parts.join(" • ")}</div>` : `<div class="mini">-</div>`;
+      })();
+
+      const actionBtn = isOk
+        ? `<span class="mini">-</span>`
+        : `<button class="smallbtn ghost" onclick="resendOne('${r.order_id.replace(/'/g,"")}')">Resend</button>`;
+
+      const created = fmtTime(r.created_at || r.sent_at);
+      const phone = r.phone || "-";
+      const value = rupiah(r.value);
+
+      tb.insertAdjacentHTML("beforeend", `
+        <tr>
+          <td class="nowrap">${created}<div class="mini">last: ${fmtTime(r.last_sent_at)}</div></td>
+          <td class="nowrap"><b>${r.order_id}</b></td>
+          <td class="nowrap">${phone}</td>
+          <td class="nowrap">Rp ${value}</td>
+          <td>${badge}${metaLine}</td>
+          <td class="nowrap">${actionBtn}</td>
+        </tr>
+      `);
+    }
+  }
+
+  async function fetchHistory(){
+    document.getElementById("historyErr").innerText = "";
+    try{
+      const data = await apiFetch("/history-today", { method:"GET" });
+
+      document.getElementById("stTotal").innerText = data.total || 0;
+      document.getElementById("stSuccess").innerText = data.success || 0;
+      document.getElementById("stFailed").innerText = data.failed || 0;
+
+      renderHistory(data.orders || []);
+
+      document.getElementById("lastRefresh").innerText =
+        new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+    }catch(err){
+      document.getElementById("historyErr").innerText = "❌ " + (err?.message || "Failed to load history");
+    }
+  }
+
+  // Auto-refresh every 15s (history tetap static karena sumbernya backend/KV)
+  fetchHistory();
+  setInterval(fetchHistory, 15000);
+
+  // Enter key -> PAID
+  ["order","phone","value"].forEach(id=>{
+    document.getElementById(id).addEventListener("keydown", (e)=>{
+      if(e.key === "Enter") markPaid();
     });
-
-    const data = await res.json();
-    document.getElementById("result").innerText =
-      JSON.stringify(data, null, 2);
-
-  } catch (err) {
-    document.getElementById("error").innerText =
-      "❌ Network error / API unreachable";
-  }
-}
+  });
 </script>
 
 </body>
