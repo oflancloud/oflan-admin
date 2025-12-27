@@ -53,9 +53,7 @@
       font-weight: 700;
     }
     button:hover { background: var(--blue2); }
-    button.secondary{
-      background:#111827;
-    }
+    button.secondary{ background:#111827; }
     button.secondary:hover{ background:#0b1220; }
     button.ghost{
       background:#eff6ff;
@@ -114,10 +112,7 @@
     .badge.ok{ background:#dcfce7; color:#166534; }
     .badge.bad{ background:#fee2e2; color:#991b1b; }
 
-    .mini{
-      font-size:12px;
-      color:var(--muted);
-    }
+    .mini{ font-size:12px; color:var(--muted); }
     .topbar{
       display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap;
     }
@@ -146,6 +141,36 @@
       border-radius:10px;
       margin-top:0;
     }
+
+    /* Auto Order ID controls */
+    .order-tools{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-top:8px;
+      flex-wrap:wrap;
+    }
+    .toggle{
+      display:flex; align-items:center; gap:8px;
+      user-select:none;
+      font-size:12px;
+      color:#111827;
+    }
+    .toggle input{ width:auto; margin:0; }
+    .tinybtn{
+      width:auto;
+      padding:8px 10px;
+      font-size:12px;
+      border-radius:10px;
+      margin-top:0;
+      background:#f3f4f6;
+      color:#111827;
+      border:1px solid var(--line);
+      cursor:pointer;
+      font-weight:700;
+    }
+    .tinybtn:hover{ background:#e5e7eb; }
   </style>
 </head>
 <body>
@@ -163,15 +188,26 @@
 
   <div class="card">
     <h3 style="margin:0 0 10px 0;">✅ Mark Paid</h3>
+
     <div class="row">
       <div>
         <label>Order ID</label>
-        <input id="order" placeholder="2512240017" autocomplete="off" />
+        <input id="order" placeholder="2512270001" autocomplete="off" />
+        <div class="order-tools">
+          <label class="toggle">
+            <input type="checkbox" id="autoOrderToggle" checked />
+            Auto Order ID (YYMMDD + 4 digit)
+          </label>
+          <button class="tinybtn" type="button" onclick="regenerateOrderId()">↻ Regenerate</button>
+        </div>
+        <div class="mini">Auto akan ambil urutan terakhir dari history hari ini + local device.</div>
       </div>
+
       <div>
         <label>Phone</label>
         <input id="phone" placeholder="+628xxxxxxxxxx / 08xxxxxxxxxx" autocomplete="off" />
       </div>
+
       <div>
         <label>Value (Rp)</label>
         <input id="value" type="number" placeholder="278000" autocomplete="off" />
@@ -187,7 +223,7 @@
 
   <div class="card">
     <h3 style="margin:0 0 6px 0;">📌 History Today (Static)</h3>
-    <div class="mini">History ini diambil dari backend (KV), jadi **tidak hilang** walau refresh halaman.</div>
+    <div class="mini">History ini diambil dari backend (KV), jadi <b>tidak hilang</b> walau refresh halaman.</div>
 
     <div class="stats">
       <div class="stat">
@@ -234,6 +270,7 @@
   const API_BASE = "https://api.oflan.id";
   document.getElementById("apiBaseLabel").innerText = API_BASE;
 
+  // ---------- helpers ----------
   function rupiah(n){
     try { return new Intl.NumberFormat("id-ID").format(Number(n || 0)); }
     catch { return String(n || 0); }
@@ -241,11 +278,8 @@
 
   function fmtTime(iso){
     if(!iso) return "-";
-    try {
-      return new Date(iso).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
-    } catch {
-      return iso;
-    }
+    try { return new Date(iso).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }); }
+    catch { return iso; }
   }
 
   async function apiFetch(path, options){
@@ -259,8 +293,89 @@
     return data;
   }
 
+  // ---------- AUTO ORDER ID ----------
+  const orderEl = document.getElementById("order");
+  const autoToggleEl = document.getElementById("autoOrderToggle");
+
+  function jakartaYYMMDD(){
+    // safest: use Intl to get parts in Asia/Jakarta
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jakarta",
+      year: "2-digit",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date());
+
+    const get = (t) => parts.find(p => p.type === t)?.value || "";
+    const yy = get("year");
+    const mm = get("month");
+    const dd = get("day");
+    return `${yy}${mm}${dd}`; // YYMMDD
+  }
+
+  function pad4(n){
+    return String(n).padStart(4, "0");
+  }
+
+  function readLocalMax(prefix){
+    const key = `oflan_last_seq_${prefix}`;
+    const v = Number(localStorage.getItem(key) || 0);
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  function writeLocalMax(prefix, seq){
+    const key = `oflan_last_seq_${prefix}`;
+    localStorage.setItem(key, String(seq));
+  }
+
+  function maxSeqFromOrders(prefix, orders){
+    let max = 0;
+    for(const o of (orders || [])){
+      const id = String(o.order_id || "");
+      if(!id.startsWith(prefix)) continue;
+      const suffix = id.slice(prefix.length);
+      // only accept exactly 4 digit suffix (or at least 4, take last 4 digits)
+      const last4 = suffix.slice(-4);
+      if(!/^\d{4}$/.test(last4)) continue;
+      const num = Number(last4);
+      if(num > max) max = num;
+    }
+    return max;
+  }
+
+  function computeNextOrderIdFromOrders(orders){
+    const prefix = jakartaYYMMDD(); // YYMMDD
+    const backendMax = maxSeqFromOrders(prefix, orders);
+    const localMax = readLocalMax(prefix);
+    const max = Math.max(backendMax, localMax);
+    const next = max + 1;
+    writeLocalMax(prefix, next);
+    return prefix + pad4(next);
+  }
+
+  function regenerateOrderId(ordersCache){
+    if(!autoToggleEl.checked) return;
+    const nextId = computeNextOrderIdFromOrders(ordersCache || window.__lastOrders || []);
+    orderEl.value = nextId;
+  }
+
+  // If user clears or focuses and empty => auto fill
+  orderEl.addEventListener("focus", () => {
+    if(!autoToggleEl.checked) return;
+    if(!orderEl.value.trim()){
+      regenerateOrderId();
+    }
+  });
+
+  autoToggleEl.addEventListener("change", () => {
+    if(autoToggleEl.checked){
+      regenerateOrderId();
+    }
+  });
+
+  // ---------- actions ----------
   async function markPaid() {
-    const order = document.getElementById("order").value.trim();
+    const order = orderEl.value.trim();
     const phone = document.getElementById("phone").value.trim();
     const value = Number(document.getElementById("value").value);
 
@@ -286,16 +401,24 @@
           ? `⚠️ Order ${order} sudah pernah di-input (ignored).`
           : `✅ OK — ${order} — Meta: ${data.meta_status}`;
 
-      // Optional: show raw JSON
       document.getElementById("result").style.display = "block";
       document.getElementById("result").innerText = JSON.stringify(data, null, 2);
 
-      // Clear value for faster repeat (optional)
-      document.getElementById("order").value = "";
+      // clear phone/value for faster repeat
       document.getElementById("phone").value = "";
       document.getElementById("value").value = "";
 
+      // refresh history
       await fetchHistory();
+
+      // auto-generate next order id ONLY if not ignored
+      if (autoToggleEl.checked && data.status !== "ignored") {
+        regenerateOrderId();
+      }
+
+      // focus phone field for speed
+      document.getElementById("phone").focus();
+
     } catch (err) {
       document.getElementById("error").innerText =
         "❌ " + (err?.message || "Network error / API unreachable");
@@ -363,7 +486,7 @@
 
       const actionBtn = isOk
         ? `<span class="mini">-</span>`
-        : `<button class="smallbtn ghost" onclick="resendOne('${r.order_id.replace(/'/g,"")}')">Resend</button>`;
+        : `<button class="smallbtn ghost" onclick="resendOne('${String(r.order_id).replace(/'/g,"")}')">Resend</button>`;
 
       const created = fmtTime(r.created_at || r.sent_at);
       const phone = r.phone || "-";
@@ -391,21 +514,32 @@
       document.getElementById("stSuccess").innerText = data.success || 0;
       document.getElementById("stFailed").innerText = data.failed || 0;
 
-      renderHistory(data.orders || []);
+      const orders = data.orders || [];
+      window.__lastOrders = orders; // cache for regenerate
+      renderHistory(orders);
 
       document.getElementById("lastRefresh").innerText =
         new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+
+      // auto fill order id on first load / refresh (only if empty or auto enabled)
+      if (autoToggleEl.checked) {
+        if (!orderEl.value.trim()) {
+          regenerateOrderId(orders);
+        } else {
+          // optional: keep user's manual order id if they typed something
+        }
+      }
     }catch(err){
       document.getElementById("historyErr").innerText = "❌ " + (err?.message || "Failed to load history");
     }
   }
 
-  // Auto-refresh every 15s (history tetap static karena sumbernya backend/KV)
+  // Auto-refresh every 15s
   fetchHistory();
   setInterval(fetchHistory, 15000);
 
-  // Enter key -> PAID
-  ["order","phone","value"].forEach(id=>{
+  // Enter key -> PAID (from phone/value)
+  ["phone","value"].forEach(id=>{
     document.getElementById(id).addEventListener("keydown", (e)=>{
       if(e.key === "Enter") markPaid();
     });
@@ -414,4 +548,3 @@
 
 </body>
 </html>
-
