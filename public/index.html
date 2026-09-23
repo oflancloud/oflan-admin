@@ -223,20 +223,20 @@
 
   <div class="card">
     <h3 style="margin:0 0 6px 0;">📌 History Today (Static)</h3>
-    <div class="mini">History ini diambil dari backend (KV), jadi <b>tidak hilang</b> walau refresh halaman.</div>
+    <div class="mini">History dimuat saat halaman dibuka, setelah aksi berhasil, atau saat menekan Refresh Now. Tidak ada refresh otomatis berkala.</div>
 
     <div class="stats">
       <div class="stat">
         <div class="mini">Total</div>
-        <b id="stTotal">0</b>
+        <b id="stTotal">—</b>
       </div>
       <div class="stat">
         <div class="mini">SUCCESS (Meta)</div>
-        <b id="stSuccess">0</b>
+        <b id="stSuccess">—</b>
       </div>
       <div class="stat">
         <div class="mini">FAILED (Meta)</div>
-        <b id="stFailed">0</b>
+        <b id="stFailed">—</b>
       </div>
     </div>
 
@@ -287,7 +287,7 @@
     let data = null;
     try { data = await res.json(); } catch(e) {}
     if(!res.ok){
-      const msg = data?.message || ("HTTP " + res.status);
+      const msg = data?.message || data?.error || ("HTTP " + res.status);
       throw new Error(msg);
     }
     return data;
@@ -374,7 +374,9 @@
   });
 
   // ---------- actions ----------
+  let paidInFlight = false;
   async function markPaid() {
+    if (paidInFlight) return;
     const order = orderEl.value.trim();
     const phone = document.getElementById("phone").value.trim();
     const value = Number(document.getElementById("value").value);
@@ -389,6 +391,11 @@
       return;
     }
 
+    if (!/^\+?[\d\s()-]+$/.test(phone) || phone.replace(/\D/g, "").length < 8 || phone.replace(/\D/g, "").length > 15) {
+      document.getElementById("error").innerText = "❌ Phone hanya boleh berisi nomor telepon, tanpa catatan harga atau nomor urut.";
+      return;
+    }
+    paidInFlight = true;
     try {
       const data = await apiFetch("/mark-paid", {
         method: "POST",
@@ -421,7 +428,9 @@
 
     } catch (err) {
       document.getElementById("error").innerText =
-        "❌ " + (err?.message || "Network error / API unreachable");
+        "❌ " + (err?.message || "Network error / API unreachable") + " — Status order belum terkonfirmasi. Simpan Order ID ini dan periksa history sebelum mengirim ulang.";
+    } finally {
+      paidInFlight = false;
     }
   }
 
@@ -505,7 +514,11 @@
     }
   }
 
+  let historyInFlight = false;
+  let historyLoaded = false;
   async function fetchHistory(){
+    if (historyInFlight) return;
+    historyInFlight = true;
     document.getElementById("historyErr").innerText = "";
     try{
       const data = await apiFetch("/history-today", { method:"GET" });
@@ -514,6 +527,7 @@
       document.getElementById("stSuccess").innerText = data.success || 0;
       document.getElementById("stFailed").innerText = data.failed || 0;
 
+      historyLoaded = true;
       const orders = data.orders || [];
       window.__lastOrders = orders; // cache for regenerate
       renderHistory(orders);
@@ -530,13 +544,17 @@
         }
       }
     }catch(err){
-      document.getElementById("historyErr").innerText = "❌ " + (err?.message || "Failed to load history");
+      document.getElementById("historyErr").innerText = "❌ " + (err?.message || "Failed to load history") + (historyLoaded ? " — Data di bawah adalah hasil terakhir, belum diperbarui." : " — History belum tersedia; bukan berarti tidak ada order.");
+      if (!historyLoaded) {
+        document.getElementById("historyBody").innerHTML = '<tr><td colspan="6" class="mini">History gagal dimuat. Coba Refresh Now setelah layanan pulih.</td></tr>';
+      }
+    } finally {
+      historyInFlight = false;
     }
   }
 
-  // Auto-refresh every 15s
+  // Explicit refresh only: idle/hidden tabs must not consume KV quota.
   fetchHistory();
-  setInterval(fetchHistory, 15000);
 
   // Enter key -> PAID (from phone/value)
   ["phone","value"].forEach(id=>{
