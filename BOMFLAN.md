@@ -2,6 +2,18 @@
 
 Status: implementation and local tests complete; deployment configuration and Meta end-to-end verification pending. No live Purchase has been sent by this work.
 
+## Deployment record — 23 September 2026
+
+- Draft PR: https://github.com/oflancloud/oflan-admin/pull/1 (`bom-flan-mark-paid` into `main`).
+- Cloudflare confirmed preview deployment `cef3d60c-3a6e-4eee-9e06-704c560c1514`, commit `3bb30cc`, status **success**, at 2026-09-23 06:34 UTC. Functions compiled and assets published successfully.
+- Preview alias: https://bom-flan-mark-paid.admin-oflan.pages.dev/bom-flan/ . The deployed endpoint could not yet be inspected: Chrome reported a client block and the independent HTTP check timed out resolving DNS. Deployment success is not an end-to-end test.
+- Dedicated D1 `bomflan-orders-test` (`0b4c15ed-f03b-4ca9-a70b-679c4ef361e0`) was created, the migration executed successfully, and the **Preview** binding `BOMFLAN_DB` was confirmed saved. No production D1 binding was added.
+- Preview variables/secrets are still absent. The Cloudflare input form is prepared for the owner to install dedicated admin credentials. Redeploy preview after saving configuration.
+- Production remains commit `fbff160`; the existing Oflan Worker has not been deployed or edited.
+- Meta portfolio access was checked again and still returned “content isn't available”. Dataset ownership, supported Graph version/action source, authorized token, Test Events code, and actual receipt in Events Manager remain unverified. No test or live event has been sent to Meta.
+
+Local validation: all 10 tests passed; Pages Functions compiled; the local Cloudflare runtime returned HTTP 401 without authentication and 200 with authentication. The separate local browser simulation passed failed-send/resend checks. Local results do not prove remote delivery.
+
 ## What changes
 
 The existing Oflan page receives a brand link to `/bom-flan/`. Its API calls and existing Worker are unchanged. Bom Flan uses Cloudflare Pages Functions under `/bom-flan/*` and a dedicated D1 binding `BOMFLAN_DB`. This avoids sharing Oflan's KV history, retry jobs, token, or order counter.
