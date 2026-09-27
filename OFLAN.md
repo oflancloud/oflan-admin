@@ -1,9 +1,11 @@
 # Oflan input in the shared admin
 
 ## Status — 2026-09-27
-Implemented and tested locally, not activated or deployed. Existing Bom Flan delivery code is unchanged; its Oflan navigation link now points to `/oflan/`.
+Implemented, tested, and deployed to the existing Preview branch. Live input remains disabled pending Meta test receipt. Existing Bom Flan delivery code is unchanged.
 
-Activation is blocked by an observed Cloudflare account incident: original Worker `winter-haze-7ce5` is missing, and the previously detached `cf-w-bffea70a` wildcard route returned. Owner confirms no authorized changes. The wildcard route was detached again. Account access must be reviewed before installing any new Meta credential.
+The owner revoked both account tokens involved in unauthorized Worker deletion/route recreation; the empty account-token list was verified. The suspicious route remains detached. This does not establish that every account session or user token is secure.
+
+Preview configuration prepared: dedicated D1 `oflan-orders` (`e31644ec-a8d4-4495-9b5f-ec23976edbad`) with migration 0002 applied and OFLAN_DB bound. Dataset 978754933141142 is the existing Feel Special Again Meta pixel associated with oflan.id and ad account 904977853882560. Owner confirmed orders originate in WhatsApp chat followed by transfer; action source is chat. Graph version v25.0, test code TEST40807. Owner saved OFLAN_META_TOKEN as an encrypted secret; its contents were not read. Live enabled remains false until verified.
 
 ## Behavior
 - Same visual workflow and existing household admin login as Bom Flan.
